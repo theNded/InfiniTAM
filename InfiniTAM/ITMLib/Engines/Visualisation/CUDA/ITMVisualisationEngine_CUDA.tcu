@@ -2,7 +2,7 @@
 
 #include "ITMVisualisationEngine_CUDA.h"
 #include "ITMVisualisationHelpers_CUDA.h"
-
+#include "../../../../ORUtils/NVTimer.h"
 using namespace ITMLib;
 
 inline dim3 getGridSize(dim3 taskSize, dim3 blockSize)
@@ -183,6 +183,10 @@ void ITMVisualisationEngine_CUDA<TVoxel, ITMVoxelBlockHash>::CreateExpectedDepth
 template <class TVoxel, class TIndex>
 static void GenericRaycast(const ITMScene<TVoxel, TIndex> *scene, const Vector2i& imgSize, const Matrix4f& invM, const Vector4f& projParams, const ITMRenderState *renderState, bool updateVisibleList)
 {
+
+  // ADDED BY WEI: generic raycast
+  StopWatchLinux timer;
+  timer.start();
 	float voxelSize = scene->sceneParams->voxelSize;
 	float oneOverVoxelSize = 1.0f / voxelSize;
 
@@ -194,7 +198,7 @@ static void GenericRaycast(const ITMScene<TVoxel, TIndex> *scene, const Vector2i
 
 	dim3 cudaBlockSize(16, 12);
 	dim3 gridSize((int)ceil((float)imgSize.x / (float)cudaBlockSize.x), (int)ceil((float)imgSize.y / (float)cudaBlockSize.y));
-	if (entriesVisibleType!=NULL) genericRaycast_device<TVoxel, ITMVoxelBlockHash, true> << <gridSize, cudaBlockSize >> >(
+	if (entriesVisibleType!=NULL) {genericRaycast_device<TVoxel, ITMVoxelBlockHash, true> << <gridSize, cudaBlockSize >> >(
 			renderState->raycastResult->GetData(MEMORYDEVICE_CUDA),
 			entriesVisibleType,
 			scene->localVBA.GetVoxelBlocks(),
@@ -206,7 +210,8 @@ static void GenericRaycast(const ITMScene<TVoxel, TIndex> *scene, const Vector2i
 			renderState->renderingRangeImage->GetData(MEMORYDEVICE_CUDA),
 			scene->sceneParams->mu
 		);
-	else genericRaycast_device<TVoxel, ITMVoxelBlockHash, false> << <gridSize, cudaBlockSize >> >(
+  }
+	else {genericRaycast_device<TVoxel, ITMVoxelBlockHash, false> << <gridSize, cudaBlockSize >> >(
 			renderState->raycastResult->GetData(MEMORYDEVICE_CUDA),
 			NULL,
 			scene->localVBA.GetVoxelBlocks(),
@@ -218,7 +223,11 @@ static void GenericRaycast(const ITMScene<TVoxel, TIndex> *scene, const Vector2i
 			renderState->renderingRangeImage->GetData(MEMORYDEVICE_CUDA),
 			scene->sceneParams->mu
 		);
-	ORcudaKernelCheck;
+  }
+  ORcudaSafeCall(cudaDeviceSynchronize());
+  float raycast_time = timer.getDiffTime();
+  printf("visualization.generic_raycast_%d %f\n", entriesVisibleType!=NULL, raycast_time);
+  // END OF ADDITION
 }
 
 template<class TVoxel, class TIndex>

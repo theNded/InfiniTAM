@@ -301,9 +301,19 @@ ITMTrackingState::TrackingResult ITMBasicEngine<TVoxel,TIndex>::ProcessFrame(ITM
 
 	bool didFusion = false;
 	if ((trackerResult == ITMTrackingState::TRACKING_GOOD || !trackingInitialised) && (fusionActive) && (relocalisationCount == 0)) {
-		// fusion
+
+    // ADDED BY WEI: integration time
+    StopWatchLinux timer;
+    timer.start();
 		denseMapper->ProcessFrame(view, trackingState, scene, renderState_live);
 		didFusion = true;
+#ifndef COMPILE_WITHOUT_CUDA
+    ORcudaSafeCall(cudaDeviceSynchronize());
+#endif
+    float integrate_time = timer.getDiffTime();
+    printf("basic.integration %f\n", integrate_time);
+    // END OF ADDITION
+
 		if (framesProcessed > 50) trackingInitialised = true;
 
 		framesProcessed++;
@@ -314,7 +324,15 @@ ITMTrackingState::TrackingResult ITMBasicEngine<TVoxel,TIndex>::ProcessFrame(ITM
 		if (!didFusion) denseMapper->UpdateVisibleList(view, trackingState, scene, renderState_live);
 
 		// raycast to renderState_live for tracking and free visualisation
+    // ADDED BY WEI: raycasting time
+    StopWatchLinux timer;
+    timer.start();
 		trackingController->Prepare(trackingState, scene, view, visualisationEngine, renderState_live);
+#ifndef COMPILE_WITHOUT_CUDA
+    ORcudaSafeCall(cudaDeviceSynchronize());
+#endif
+    float raycasting_time = timer.getDiffTime();
+    printf("basic.raycasting %f\n", raycasting_time);
 
 		if (addKeyframeIdx >= 0)
 		{
@@ -337,7 +355,6 @@ ITMTrackingState::TrackingResult ITMBasicEngine<TVoxel,TIndex>::ProcessFrame(ITM
 	QuaternionFromRotationMatrix(R, q);
 	fprintf(stderr, "%f %f %f %f %f %f %f\n", t[0], t[1], t[2], q[1], q[2], q[3], q[0]);
 #endif
-    
     return trackerResult;
 }
 

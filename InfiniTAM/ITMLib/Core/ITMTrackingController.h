@@ -8,6 +8,7 @@
 #include "../Engines/Visualisation/Interface/ITMVisualisationEngine.h"
 #include "../Trackers/Interface/ITMTracker.h"
 #include "../Utils/ITMLibSettings.h"
+#include "../../ORUtils/NVTimer.h"
 
 namespace ITMLib
 {
@@ -81,20 +82,33 @@ namespace ITMLib
 			}
 			else
 			{
+        // ADDED BY WEI: raycasting
+        StopWatchLinux timer;
+        timer.start();
 				visualisationEngine->CreateExpectedDepths(scene, trackingState->pose_d, &(view->calib.intrinsics_d), renderState);
+        float preparation_time = timer.getDiffTime();
+        printf("visualization.create_expect_depths %f\n", preparation_time);
 
 				if (requiresFullRendering)
 				{
+          timer.reset();
+          timer.start();
 					visualisationEngine->CreateICPMaps(scene, view, trackingState, renderState);
 					trackingState->pose_pointCloud->SetFrom(trackingState->pose_d);
 					if (trackingState->age_pointCloud==-1) trackingState->age_pointCloud=-2;
 					else trackingState->age_pointCloud = 0;
+#ifndef COMPILE_WITHOUT_CUDA
+          ORcudaSafeCall(cudaDeviceSynchronize());
+#endif
+          float raycast_time = timer.getDiffTime();
+          printf("visualization.create_icp_maps %f\n", raycast_time);
 				}
 				else
 				{
 					visualisationEngine->ForwardRender(scene, view, trackingState, renderState);
 					trackingState->age_pointCloud++;
 				}
+        // END OF ADDITION
 			}
 		}
 

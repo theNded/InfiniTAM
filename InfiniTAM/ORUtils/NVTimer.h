@@ -252,7 +252,7 @@ class StopWatchLinux : public StopWatchInterface
         //! _stopped_ (ie finished sessions) and the current total time
         inline float getAverageTime();
 
-    private:
+    public:
 
         // helper functions
 

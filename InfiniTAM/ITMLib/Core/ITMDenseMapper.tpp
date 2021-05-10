@@ -5,6 +5,7 @@
 #include "../Engines/Reconstruction/ITMSceneReconstructionEngineFactory.h"
 #include "../Engines/Swapping/ITMSwappingEngineFactory.h"
 #include "../Objects/RenderStates/ITMRenderState_VH.h"
+#include "../../ORUtils/NVTimer.h"
 using namespace ITMLib;
 
 template<class TVoxel, class TIndex>
@@ -32,12 +33,27 @@ void ITMDenseMapper<TVoxel,TIndex>::ResetScene(ITMScene<TVoxel,TIndex> *scene) c
 template<class TVoxel, class TIndex>
 void ITMDenseMapper<TVoxel,TIndex>::ProcessFrame(const ITMView *view, const ITMTrackingState *trackingState, ITMScene<TVoxel,TIndex> *scene, ITMRenderState *renderState, bool resetVisibleList)
 {
-	// allocation
-	sceneRecoEngine->AllocateSceneFromDepth(scene, view, trackingState, renderState, false, resetVisibleList);
+	// ADDED BY WEI: voxel block allocation
+  StopWatchLinux timer;
+  timer.start();
+  sceneRecoEngine->AllocateSceneFromDepth(scene, view, trackingState, renderState, false, resetVisibleList);
+#ifndef COMPILE_WITHOUT_CUDA
+  ORcudaSafeCall(cudaDeviceSynchronize());
+#endif
+  float alloc_time = timer.getDiffTime();
+  printf("map.allocate %f\n", alloc_time);
+  timer.reset();
 
-	// integration
+	timer.start();
 	sceneRecoEngine->IntegrateIntoScene(scene, view, trackingState, renderState);
+#ifndef COMPILE_WITHOUT_CUDA
+  ORcudaSafeCall(cudaDeviceSynchronize());
+#endif
+  float integrate_time = timer.getDiffTime();
+  printf("map.integrate %f\n", integrate_time);
 
+  timer.reset();
+  timer.start();
 	if (swappingEngine != NULL) {
 		// swapping: CPU -> GPU
 		if (swappingMode == ITMLibSettings::SWAPPINGMODE_ENABLED) swappingEngine->IntegrateGlobalIntoLocal(scene, renderState);
@@ -53,8 +69,14 @@ void ITMDenseMapper<TVoxel,TIndex>::ProcessFrame(const ITMView *view, const ITMT
 			break;
 		case ITMLibSettings::SWAPPINGMODE_DISABLED:
 			break;
-		} 
+		}
 	}
+#ifndef COMPILE_WITHOUT_CUDA
+  ORcudaSafeCall(cudaDeviceSynchronize());
+#endif
+  float swap_time = timer.getDiffTime();
+  printf("map.swap %f\n", swap_time);
+  // END OF ADDITION
 }
 
 template<class TVoxel, class TIndex>
