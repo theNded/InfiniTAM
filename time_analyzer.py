@@ -10,7 +10,7 @@ if __name__ == '__main__':
     with open(filename) as f:
         content = f.readlines()
 
-    content = content[6:-2]
+    content = content[6:-3]
 
     time_dict = {}
     for line in content:
