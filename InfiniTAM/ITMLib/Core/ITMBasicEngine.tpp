@@ -328,12 +328,6 @@ ITMTrackingState::TrackingResult ITMBasicEngine<TVoxel,TIndex>::ProcessFrame(ITM
     StopWatchLinux timer;
     timer.start();
 		trackingController->Prepare(trackingState, scene, view, visualisationEngine, renderState_live);
-#ifndef COMPILE_WITHOUT_CUDA
-    ORcudaSafeCall(cudaDeviceSynchronize());
-#endif
-    float raycasting_time = timer.getDiffTime();
-    printf("basic.raycasting %f\n", raycasting_time);
-
 		if (addKeyframeIdx >= 0)
 		{
 			ORUtils::MemoryBlock<Vector4u>::MemoryCopyDirection memoryCopyDirection =
@@ -341,6 +335,11 @@ ITMTrackingState::TrackingResult ITMBasicEngine<TVoxel,TIndex>::ProcessFrame(ITM
 
 			kfRaycast->SetFrom(renderState_live->raycastImage, memoryCopyDirection);
 		}
+#ifndef COMPILE_WITHOUT_CUDA
+    ORcudaSafeCall(cudaDeviceSynchronize());
+#endif
+    float raycasting_time = timer.getDiffTime();
+    printf("basic.raycasting %f\n", raycasting_time);
 	}
 	else *trackingState->pose_d = oldPose;
 

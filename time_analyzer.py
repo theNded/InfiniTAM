@@ -26,3 +26,7 @@ if __name__ == '__main__':
     raycast_time = np.array(time_dict['basic.raycasting'])
     print(integrate_time.mean())
     print(raycast_time.mean())
+
+    integrate_alloc_time = np.array(time_dict['map.allocate'])
+    integrate_fusion_time = np.array(time_dict['map.integrate'])
+    print(integrate_alloc_time.mean(), integrate_fusion_time.mean())
