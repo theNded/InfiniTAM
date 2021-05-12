@@ -22,11 +22,5 @@ if __name__ == '__main__':
         else:
             time_dict[key].append(value)
 
-    integrate_time = np.array(time_dict['basic.integration'])
-    raycast_time = np.array(time_dict['basic.raycasting'])
-    print(integrate_time.mean())
-    print(raycast_time.mean())
-
-    integrate_alloc_time = np.array(time_dict['map.allocate'])
-    integrate_fusion_time = np.array(time_dict['map.integrate'])
-    print(integrate_alloc_time.mean(), integrate_fusion_time.mean())
+    for k, v in time_dict.items():
+        print(k, np.array(v).mean())
